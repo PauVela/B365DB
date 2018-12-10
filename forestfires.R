@@ -42,21 +42,21 @@ testForest<- forestfires[-TrainFF,]
 
 ####Prediction####
 fitControl <- trainControl(method = "cv",number = 10)
-##lm##
+####lm#####
 LinearModel <- lm(log.area ~temp+DMC+X + RH ,
          data = forestfires)
 LinearModel
 summary(LinearModel)
-predictionLM <- predict(LinearModel, select(testForest,FFMC,temp ,DMC ,log.DC,log.wind,X,log.Y,RH))
+predictionLM <- predict(LinearModel, select(testForest,temp ,DMC,X,RH))
 predictionNoLog<- exp(predictionLM)-1
 predictionLMNoLog<- data.frame(pred= predictionNoLog, obs=testForest$area)
 View(predictionNoLog)
-
+##LM prediction plot##
 ggplot(predictionLMNoLog, aes(x = pred, y = obs)) + geom_point(alpha = 0.5,
 position = position_jitter(width=0.2)) + geom_abline(colour = "blue") + ggtitle("LM Prediction")
 
 
-##SVM##
+####SVM####
 FFSVM<-train(log.area ~ 0+temp+DMC+X+RH,
                   data=trainForest,
                   method='svmRadial',
@@ -70,19 +70,21 @@ predictionFFNoLog<- exp(predictionFFSVM)-1
 predictionFFSVMNoLog<- data.frame(pred= predictionFFNoLog, obs=testForest$area)
 View(predictionFFSVMNoLog)
 testForest$predictionFFSVMNoLog<-predictionFFSVM
+testForest$DifPredRealSVM <- testForest$predictionFFSVM - testForest$area
+##plots SVM##
+ggplot(predictionFFSVMNoLog, aes(x = pred, y = obs)) + geom_point(alpha = 0.5,position = position_jitter(width=0.2)) + geom_abline(colour = "blue") + ggtitle("SVM Prediction")
+FFSVMerror<-plot(testForest$DifPredRealSVM)
 
-ggplot(predictionFFSVMNoLog, aes(x = pred, y = obs)) + geom_point(alpha = 0.5,
-                                                               position = position_jitter(width=0.2)) + geom_abline(colour = "blue") + ggtitle("SVM Prediction")
-##RandomForest##
+####RandomForest####
 RFFF<-train(log.area~ 0+temp+DMC+X+RH, data= trainForest, method="rf",
               trControl=fitControl, ntree=50, do.trace=10)
-
-varImp(RFFF)
-
 predictionRFFF<-predict(RFFF,testForest)
 View(predictionRFFF)
 predictionRFNoLog<- exp(predictionRFFF)-1
 predictionFFRFNoLog<- data.frame(pred= predictionRFNoLog, obs=testForest$area)
 View(predictionFFRFNoLog)
-testForest$predictionFFRFNoLog<-predictionFFRF
-postResample(pred = predictionRFFF, obs = testForest$log.area)
+testForest$DifPredRealRF <- testForest$predictionFFRFNoLog - testForest$area
+##plots RF##
+ggplot(predictionFFRFNoLog, aes(x = pred, y = obs)) + geom_point(alpha = 0.5,position = position_jitter(width=0.2)) + geom_abline(colour = "blue") + ggtitle("RF Prediction")
+FFRFerror<-plot(testForest$DifPredRealRF)
+
